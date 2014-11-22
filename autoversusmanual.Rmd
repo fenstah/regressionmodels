@@ -5,15 +5,15 @@ date: "Friday, November 21, 2014"
 output: pdf_document
 ---
 ## Executive Summary
-The context for this project is that of an employee working for *Motor Trend* magazine; leveraging the data from 1974 that is comprised of fuel consumption and 10 aspects of automobile design and performance for 32 automobiles (1973-74 models).  We are asked to answer the questions:
+The context for this project is that of an employee working for *Motor Trend* magazine and leveraging the data from 1974 that includes fuel consumption and 10 other aspects of automobile design and performance for 32 automobiles (1973-74 models).  We were asked to answer the questions:
 
 - "Is an automatic or manual transmission better for MPG"
 - "Quantify the MPG difference between automatic and manual transmissions"
 
-We investigated this relationship using multiple different models; first analyzing the correlation between only *mpg* and *am (transmission)* and then exploring whether additional aspects might play a  confounding role in any identified correlation. While it initially appeared that the transmission type has a direct relationship on *mpg* when observed in isolation, we identified that the *wt (weight)* and *cyl (number of cylinders)* were significant confounders to this effect when comparing all variables.
+We investigated this relationship using multiple different models; first analyzing the correlation between only *mpg* and *am (transmission)* and then exploring whether additional variables might have a  confounding effect. While it appeared that the transmission type had a direct relationship on *mpg* when observed in isolation, we further observed that *wt (weight)* and *cyl (number of cylinders)* were significant contributors to the fuel economy.
 
 ## Cleaning the data
-Observing the data, we see that the primary predictor we want to analyze, *am (transmission)* is best represented as a factor where *0* can be interpreted as *automatic* and *1* can be interpreted as *manual*. We converted that variables as well as a few other variables to factors where they are best represented by as a category as opposed to a continuous number. 
+Observing the data, we saw that the primary predictor we wanted to analyze, *am (transmission)* was best represented as a factor where *0* was interpreted as *automatic* and *1* as *manual*. We converted that and other variables to factors where they were best represented as a category as opposed to a continuous number. 
 ```{r, echo=TRUE}
 data(mtcars)
 mtcars$am <- factor(mtcars$am,labels=c("automatic","manual"))
@@ -26,32 +26,30 @@ First, we analyzed the relationship between just *mpg* and *am*.  We started wit
 ```{r, echo=TRUE}
 mpgamTtest <- t.test(mpg~am, mtcars)
 ```
-The test results in a p-value of `r mpgamTtest$p.value` and confidence intervals of `r mpgamTtest$conf.int[1]` and `r mpgamTtest$conf.int[2]`.  The means for automatic transmissions show as `r mpgamTtest$estimate[1]` while the mean for manual transmissions is `r mpgamTtest$estimate[2]`. Thus, we conclude from this t-test that there is a significant difference between the average *mpg* for cars with automatic transmissions and those with manual transmissions. We then conducted a linear regression analysis on just these variables to corroborate our observations.  
+The test resulted in a p-value of `r mpgamTtest$p.value` and confidence intervals of `r mpgamTtest$conf.int[1]` and `r mpgamTtest$conf.int[2]`.  The means for automatic transmission was `r mpgamTtest$estimate[1]` and the mean for manual transmission was `r mpgamTtest$estimate[2]`. This t-test indicated that there is a significant difference between the average *mpg* for cars with automatic transmissions and those with manual transmissions. We then conducted a linear regression analysis on just these variables to corroborate our observations.  
 ```{r, echo=TRUE}
 mpgamFit <- lm(mpg~am, mtcars)
 ```
-Through regression analysis, we confirm that transmission has a significant effect and that the default factor, automatic, is observed to have a mean of `r mpgamFit$coefficients[1]` and manual transmission has a mean of `r mpgamFit$coefficients[1]+mpgamFit$coefficients[2]`.  This is easily observed in the box plot shown in *Appendix: Figure 1*.  Analyzing just *mpg* and *am* in isolation of any other variable leads us to believe that cars with a manual transmission have better fuel consumption than those with an automatic transmission.
+Through regression analysis, we confirmed that transmission had a significant effect and that the averages for both transmission types were exactly the same as calculated using the t-test.  This was also observed in the box plot shown in *Appendix: Figure 1*.  Analyzing just *mpg* and *am* in isolation of any other variable led us to believe that cars with a transmission type alone can be used to predict the fuel consumption for a vehicle.
 
-However, this analysis alone is not be enough to conclude the impact of transmission on fuel economy.  Upon examining the residuals for this correlation, shown in *Appendix: Figure 2*, we did **not** observe the random plotting of points that we expected around the regression line. That is, there appeared to be some pattern to the residuals.  This suggested that this correlation may be due to some other factor(s).
+However, this analysis alone was not be enough to conclude the impact of transmission on fuel economy.  Upon examining the residuals for this model, shown in *Appendix: Figure 2*, we did **not** observe the random plotting of points that we expected around the regression line. That is, there appeared to be some pattern to the residuals.  This suggested that the correlation may be due to some other factor(s).
+
 ### Considering other models
-Therefore, we considered the possibility that other variables may be having a confounding effect on this correlation.  We viewed the correlation among all variables in *Appendix: Figure 3* to gauge whether a confounding effect may indeed exist.  By observing the numerical values and stretched correlation ellipses in this view, we detected strong correlations between many other variables. Thus, we considered the possiblity that other variables were having a confounding effect. We ascertained this numerically by first modeling all the variables against *mpg*. Then, we leveraged the stepwise modeling selection to determine the ideal predictors for the best model. 
+Therefore, we considered the possibility that other variables may have a confounding effect on this correlation.  We viewed the correlation among all variables in *Appendix: Figure 3* to gauge whether a confounding effect may indeed exist.  By observing the numerical values and stretched correlation ellipses in this view, we observed strong correlations between many variables. Thus, we considered the possiblity that other variables could have a confounding effect. We ascertained this numerically by first modeling all the variables against *mpg* and then.using the stepwise modeling selection function to determine the ideal predictors for the best model. 
 ```{r, echo=TRUE, results='hide'}
 mpgallFit<-lm(mpg~., mtcars)
 mpgBestFit<-step(mpgallFit)
 ```
-```{r, echo=TRUE}
-summary(mpgBestFit)
-```
-This analysis suggested that *cyl*, *hp*, and *wt* represent significant confounders.  Thus, we used the *anova* function to compare this model against that with just *mpg* and *am*:
+This analysis showed other variables *(`r names(mpgBestFit$coefficients[c(2:length(mpgBestFit$coefficients))])`)* representing significant confounders with coefficients of *(`r mpgBestFit$coefficients[c(2:length(mpgBestFit$coefficients))]`)*.  Thus, we used the *anova* function to compare this model against that with just *mpg* and *am*:
 ```{r, echo=TRUE}
 anova(mpgamFit, mpgBestFit)
 ```
-This comparison led us to reject the hypothesis that *am* alone is the cause for the correlation with *mpg* as we saw that *cyl*, *hp*, and *wt* had significant impact.
+With this model comparison, we rejected the hypothesis that *am* alone impacted  *mpg* as we saw that *cyl*, *hp*, and *wt* also had significant impact.
 
-Again, we examined the residuals to determine whether a random set of plots around the regression line for this new model.  The residual plot depicted in *Appendix: Figure 3b* did indeed show that this random pattern.  Additionally, we observed the Normal Q-Q plot, Scale-Location, and Residuals versus Leverage plots illustrating the pattern we expect to see to support this regression analysis.  
+We examined the residuals again to determine whether a random set of plots existed around the regression line for this new model.  This time, the residual plot depicted in *Appendix: Figure 3b* showed the random pattern we expected.  Additionally, we observed the Normal Q-Q plot, Scale-Location, and Residuals versus Leverage plots illustrated the pattern we expected to see to support this regression analysis.  
 
 ## Conclusion
-We conclude that while transmission plays a role in the fuel economy for a vehicle, it is not the only variable that has this impact.  The weight and the number of cylinders also impact the fuel economy for a vehicle and must be considered together with the transmission when trying to predict the *mpg* that particular car will get.
+We conclude that while transmission plays a role in the fuel economy for a vehicle, it is not the only variable that drives this impact.  The weight and the number of cylinders also impact the fuel economy for a vehicle and must be considered together with the transmission when trying to predict the *mpg* that a particular car will get.
 
 ## Appendix
 ###Figure 1: Boxplot of MPG by Transmission Type
@@ -59,11 +57,13 @@ We conclude that while transmission plays a role in the fuel economy for a vehic
 boxplot(mtcars$mpg~ mtcars$am, main = "MPG by Transmission Type", 
         ylab = "MPG", xlab = "Transmission Type")
 ```
+
 ###Figure 2: Residual plot for just Transmission Type
 ```{r, echo=FALSE}
 par(mfrow = c(2, 2))
 plot(mpgamFit)
 ```
+
 ###Figure 3: Scatterplot matrix for all variables
 ```{r, echo=FALSE}
 Sys.setenv(JAVA_HOME='C:/Program Files/Java//jre7')
@@ -79,6 +79,7 @@ for (dep in deps){
 library(psych)
 pairs.panels(mtcars)
 ```
+
 ###Figure 4: Residual plot for Best Model
 ```{r, echo=FALSE}
 par(mfrow = c(2, 2))
